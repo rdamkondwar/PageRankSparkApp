@@ -1,0 +1,68 @@
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext._
+import org.apache.spark.SparkConf
+
+object PageRankPartC1 {
+  def main(args: Array[String]) {
+
+    val conf = new SparkConf().setAppName("CS-744-Assignment1-PartC-1")
+
+    val sc = new SparkContext(conf)
+
+    val datafile = sc.textFile("/Users/rohitsd/bigdata/web-BerkStan.txt")
+
+    val raw_data = datafile.filter(f => !f.startsWith("#"))
+    raw_data.count
+
+    val data = raw_data.map(line => line.split("\\s+"))
+
+    //Remove partial data and self loops
+    val filtered_data = data.filter(e => (e.size == 2 && !e(0).equals(e(1))))
+    filtered_data.count
+
+    // val datatuples = data.map(e => (e(0), e(1)))
+    val datatuples = data.map(e => (e(0), List(e(1))))
+    datatuples.count
+
+    // var page_ranks = datatuples.map(e => e._1).distinct.map(f => (f, 1.0))
+    val init_page_ranks = data.flatMap(e => List(e(0), e(1))).distinct.map(f => (f, 1.0))
+    var page_ranks = init_page_ranks
+    page_ranks.count
+
+    val groupedData = datatuples.reduceByKey((a,b) => a.:::(b))
+
+    def generateContrib(rank: Double, neighbours: Option[List[String]]) = {
+      val new_rank: Double = neighbours match {
+        case Some(value) => 1.0*rank/neighbours.get.size
+        case None => 0.0
+      }
+      neighbours.getOrElse(List()).map(n => (n, new_rank))
+    }
+
+    // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
+    val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
+
+    page_ranks = exploded_contribs.reduceByKey((a,b) => (a+b)).mapValues(v => (0.15 + 0.85*v))
+
+    // var c = 0
+    for (x <- 1 until 2) {
+      val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
+      page_ranks = exploded_contribs.reduceByKey(_+_).mapValues(v => 0.15 + 0.85*v)
+    }
+
+
+    page_ranks.count
+
+    val final_page_ranks = init_page_ranks.leftOuterJoin(page_ranks).map(e => {
+      val rank = e._2._2 match {
+        case Some(value) => value
+        case None => e._2._1
+      }
+
+      (e._1, rank)
+    })
+
+    final_page_ranks.count
+
+  }
+}
