@@ -9,25 +9,25 @@ object PageRankPartC1 {
 
     val sc = new SparkContext(conf)
 
-    val datafile = sc.textFile("/Users/rohitsd/bigdata/web-BerkStan.txt")
+    val datafile = sc.textFile("/spark/deployment/web-BerkStan.txt")
 
     val raw_data = datafile.filter(f => !f.startsWith("#"))
-    raw_data.count
+    // raw_data.count
 
     val data = raw_data.map(line => line.split("\\s+"))
 
-    //Remove partial data and self loops
+    // Remove partial data and self loops
     val filtered_data = data.filter(e => (e.size == 2 && !e(0).equals(e(1))))
-    filtered_data.count
+    // filtered_data.count
 
     // val datatuples = data.map(e => (e(0), e(1)))
     val datatuples = data.map(e => (e(0), List(e(1))))
-    datatuples.count
+    // datatuples.count
 
     // var page_ranks = datatuples.map(e => e._1).distinct.map(f => (f, 1.0))
     val init_page_ranks = data.flatMap(e => List(e(0), e(1))).distinct.map(f => (f, 1.0))
     var page_ranks = init_page_ranks
-    page_ranks.count
+    // page_ranks.count
 
     val groupedData = datatuples.reduceByKey((a,b) => a.:::(b))
 
@@ -63,5 +63,6 @@ object PageRankPartC1 {
 
     final_page_ranks.count
     final_page_ranks.take(100).foreach(println)
+    sc.stop()
   }
 }
