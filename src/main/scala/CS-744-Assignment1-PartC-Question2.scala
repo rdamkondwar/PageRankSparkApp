@@ -9,25 +9,25 @@ object PageRankPartC2 {
 
     val sc = new SparkContext(conf)
 
-    val datafile = sc.textFile("/Users/rohitsd/bigdata/web-BerkStan.txt")
+    val datafile = sc.textFile("/spark/deployment/web-BerkStan.txt", 50)
 
     val raw_data = datafile.filter(f => !f.startsWith("#"))
-    raw_data.count
+    // raw_data.count
 
     val data = raw_data.map(line => line.split("\\s+"))
 
-    //Remove partial data and self loops
+    // Remove partial data and self loops
     val filtered_data = data.filter(e => (e.size == 2 && !e(0).equals(e(1))))
-    filtered_data.count
+    // filtered_data.count
 
     // val datatuples = data.map(e => (e(0), e(1)))
     val datatuples = data.map(e => (e(0), List(e(1))))
-    datatuples.count
+    // datatuples.count
 
     // var page_ranks = datatuples.map(e => e._1).distinct.map(f => (f, 1.0))
     val init_page_ranks = data.flatMap(e => List(e(0), e(1))).distinct.map(f => (f, 1.0))
     var page_ranks = init_page_ranks
-    page_ranks.count
+    // page_ranks.count
 
     val groupedData = datatuples.reduceByKey((a,b) => a.:::(b))
 
@@ -39,18 +39,23 @@ object PageRankPartC2 {
       neighbours.getOrElse(List()).map(n => (n, new_rank))
     }
 
-    // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
+    // def generateContrib(rank: Double, neighbours: List[String]) = {
+    //    val new_rank: Double = 1.0*rank/neighbours.size
+    //    neighbours.map(n => (n, new_rank))
+    //  }
+
     val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
+    // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
 
     page_ranks = exploded_contribs.reduceByKey((a,b) => (a+b)).mapValues(v => (0.15 + 0.85*v))
 
-    for (x <- 1 until 2) {
+    for (x <- 1 until 10) {
+      // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
       val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
       page_ranks = exploded_contribs.reduceByKey(_+_).mapValues(v => 0.15 + 0.85*v)
     }
 
-
-    page_ranks.count
+    // page_ranks.count
 
     val final_page_ranks = init_page_ranks.leftOuterJoin(page_ranks).map(e => {
       val rank = e._2._2 match {
@@ -63,5 +68,7 @@ object PageRankPartC2 {
 
     final_page_ranks.count
     final_page_ranks.take(100).foreach(println)
+    sc.stop()
+    // Thread.sleep(20000)
   }
 }
