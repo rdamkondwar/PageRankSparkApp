@@ -2,10 +2,10 @@ import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 import org.apache.spark.SparkConf
 
-object PageRankPartC1 {
+object PageRankPartC2 {
   def main(args: Array[String]) {
 
-    val conf = new SparkConf().setAppName("CS-744-Assignment1-PartC-1")
+    val conf = new SparkConf().setAppName("CS-744-Assignment1-PartC-2")
 
     val sc = new SparkContext(conf)
 
