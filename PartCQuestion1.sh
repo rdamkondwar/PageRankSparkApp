@@ -11,11 +11,11 @@ start_spark_job() {
                                  --class PageRankPartC1 \
                                  /home/ubuntu/rohit/PageRankSparkApp/target/scala-2.11/page-rank-group-23_2.11-1.0.jar \
 	                         /spark/deployment/web-BerkStan.txt \
-                                 10 50
+                                 10 2
 }
 
 echo "Clearing cache"
-sudo sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"
+pdsh -R ssh -w vm-23-[1-5] 'sudo sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"'
 
 io_read_command='iostat -d | tail -2 | head -1 | tr -s " " | cut -d " " -f5'
 io_read_before=`pdsh -R ssh -w vm-23-[1-5] "$io_read_command" | cut -d ' ' -f2 | python -c "import sys; print(sum(int(l) for l in sys.stdin))"`

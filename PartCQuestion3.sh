@@ -13,22 +13,33 @@ start_spark_job() {
 }
 
 echo "Clearing cache"
-sudo sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"
+pdsh -R ssh -w vm-23-[1-5] 'sudo sh -c "sync; echo 3 > /proc/sys/vm/drop_caches"'
 
-io_read_before=`iostat -d | tail -2 | head -1 | tr -s ' ' | cut -d ' ' -f5`
-io_write_before=`iostat -d | tail -2 | head -1 | tr -s ' ' | cut -d ' ' -f6`
+io_read_command='iostat -d | tail -2 | head -1 | tr -s " " | cut -d " " -f5'
+io_read_before=`pdsh -R ssh -w vm-23-[1-5] "$io_read_command" | cut -d ' ' -f2 | python -c "import sys; print(sum(int(l) for l in sys.stdin))"`
 
-net_recv_before=`netstat -i | grep eth0 | tr -s ' ' | cut -d ' ' -f4`
-net_send_before=`netstat -i | grep eth0 | tr -s ' ' | cut -d ' ' -f8`
+io_write_command='iostat -d | tail -2 | head -1 | tr -s " " | cut -d " " -f6'
+io_write_before=`pdsh -R ssh -w vm-23-[1-5] "$io_write_command" | cut -d ' ' -f2 | python -c "import sys; print(sum(int(l) for l in sys.stdin))"`
 
-echo "Running Job"
+net_recv_command='netstat -i | grep eth0 | tr -s " " | cut -d " " -f4'
+net_recv_before=`pdsh -R ssh -w vm-23-[1-5] "$net_recv_command" | cut -d ' ' -f2 | python -c "import sys; print(sum(int(l) for l in sys.stdin))"`
+
+net_send_command='netstat -i | grep eth0 | tr -s " " | cut -d " " -f8'
+net_send_before=`pdsh -R ssh -w vm-23-[1-5] "$io_write_command" | cut -d ' ' -f2 | python -c "import sys; print(sum(int(l) for l in sys.stdin))"`
+
 start_spark_job
 
-io_read_after=`iostat -d | tail -2 | head -1 | tr -s ' ' | cut -d ' ' -f5`
-io_write_after=`iostat -d | tail -2 | head -1 | tr -s ' ' | cut -d ' ' -f6`
+io_read_command='iostat -d | tail -2 | head -1 | tr -s " " | cut -d " " -f5'
+io_read_after=`pdsh -R ssh -w vm-23-[1-5] "$io_read_command" | cut -d ' ' -f2 | python -c "import sys; print(sum(int(l) for l in sys.stdin))"`
 
-net_recv_after=`netstat -i | grep eth0 | tr -s ' ' | cut -d ' ' -f4`
-net_send_after=`netstat -i | grep eth0 | tr -s ' ' | cut -d ' ' -f8`
+io_write_command='iostat -d | tail -2 | head -1 | tr -s " " | cut -d " " -f6'
+io_write_after=`pdsh -R ssh -w vm-23-[1-5] "$io_write_command" | cut -d ' ' -f2 | python -c "import sys; print(sum(int(l) for l in sys.stdin))"`
+
+net_recv_command='netstat -i | grep eth0 | tr -s " " | cut -d " " -f4'
+net_recv_after=`pdsh -R ssh -w vm-23-[1-5] "$net_recv_command" | cut -d ' ' -f2 | python -c "import sys; print(sum(int(l) for l in sys.stdin))"`
+
+net_send_command='netstat -i | grep eth0 | tr -s " " | cut -d " " -f8'
+net_send_after=`pdsh -R ssh -w vm-23-[1-5] "$io_write_command" | cut -d ' ' -f2 | python -c "import sys; print(sum(int(l) for l in sys.stdin))"`
 
 io_read=$(( io_read_after - io_read_before ))
 io_write=$(( io_write_after - io_write_before ))
