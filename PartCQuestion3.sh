@@ -8,10 +8,8 @@ start_spark_job() {
                                  --conf spark.executor.cores=4 \
                                  --conf spark.task.cpus=1 \
                                  --master spark://10.254.0.146:7077 \
-                                 --class PageRankPartC1 \
-                                 /home/ubuntu/rohit/PageRankSparkApp/target/scala-2.11/page-rank-group-23_2.11-1.0.jar \
-	                         /spark/deployment/web-BerkStan.txt \
-                                 10 50
+                                 --class PageRankPartC3 \
+                                 /home/ubuntu/rohit/PageRankSparkApp/target/scala-2.11/page-rank-group-23_2.11-1.0.jar
 }
 
 echo "Clearing cache"
@@ -23,6 +21,7 @@ io_write_before=`iostat -d | tail -2 | head -1 | tr -s ' ' | cut -d ' ' -f6`
 net_recv_before=`netstat -i | grep eth0 | tr -s ' ' | cut -d ' ' -f4`
 net_send_before=`netstat -i | grep eth0 | tr -s ' ' | cut -d ' ' -f8`
 
+echo "Running Job"
 start_spark_job
 
 io_read_after=`iostat -d | tail -2 | head -1 | tr -s ' ' | cut -d ' ' -f5`

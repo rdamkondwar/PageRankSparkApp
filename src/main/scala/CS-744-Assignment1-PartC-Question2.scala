@@ -10,7 +10,7 @@ object PageRankPartC2 {
 
     val sc = new SparkContext(conf)
 
-    val datafile = sc.textFile("/spark/deployment/web-BerkStan.txt", 50)
+    val datafile = sc.textFile("/spark/deployment/web-BerkStan.txt", 20)
 
     val raw_data = datafile.filter(f => !f.startsWith("#"))
     // raw_data.count
@@ -21,44 +21,50 @@ object PageRankPartC2 {
     val filtered_data = data.filter(e => (e.size == 2 && !e(0).equals(e(1))))
     // filtered_data.count
 
-    // val datatuples = data.map(e => (e(0), e(1)))
+    // val datatuples = filtered_data.map(e => (e(0), e(1)))
     // TODO: Partition
-    val datatuples = data.map(e => (e(0), List(e(1))))
+    val datatuples = filtered_data.map(e => (e(0), List(e(1))))
     // datatuples.count
-    val rangePartitioner = new RangePartitioner(5, datatuples)
-    val partitioned_datatuples = datatuples.partitionBy(rangePartitioner)
+    // val rangePartitioner = new RangePartitioner(15, datatuples)
 
-    // var page_ranks = datatuples.map(e => e._1).distinct.map(f => (f, 1.0))
-    val init_page_ranks = data.flatMap(e => List(e(0), e(1))).distinct.map(f => (f, 1.0)).partitionBy(rangePartitioner)
+    var init_page_ranks = filtered_data.flatMap(e => List(e(0), e(1))).distinct.map(f => (f, 1.0))
+    
+    val rankPartitioner = new RangePartitioner(20, datatuples)
+    init_page_ranks = init_page_ranks.partitionBy(rankPartitioner)
     var page_ranks = init_page_ranks
     // page_ranks.count
+    
+    val partitioned_datatuples = datatuples.partitionBy(rankPartitioner)
 
     val groupedData = partitioned_datatuples.reduceByKey((a,b) => a.:::(b))
 
     def generateContrib(rank: Double, neighbours: Option[List[String]]) = {
-      val new_rank: Double = neighbours match {
-        case Some(value) => 1.0*rank/neighbours.get.size
-        case None => 0.0
-      }
-      neighbours.getOrElse(List()).map(n => (n, new_rank))
+       val new_rank: Double = neighbours match {
+         case Some(value) => 1.0*rank/neighbours.get.size
+         case None => 0.0
+       }
+       neighbours.getOrElse(List()).map(n => (n, new_rank))
     }
 
     // def generateContrib(rank: Double, neighbours: List[String]) = {
-    //    val new_rank: Double = 1.0*rank/neighbours.size
-    //    neighbours.map(n => (n, new_rank))
-    //  }
+    //     val new_rank: Double = 1.0*rank/neighbours.size
+    //     neighbours.map(n => (n, new_rank))
+    // }
 
-    // TODO: Partition
-    val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2)).partitionBy(rangePartitioner)
+    // Todo: Partition
+    val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
     // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
-
+    // val exploded_contribs = page_ranks.join(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
+    
     page_ranks = exploded_contribs.reduceByKey((a,b) => (a+b)).mapValues(v => (0.15 + 0.85*v))
 
     for (x <- 1 until 10) {
       // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
       // TODO: Partition
-      val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2)).partitionBy(rangePartitioner)
+      val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
+      // val exploded_contribs = page_ranks.join(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
       page_ranks = exploded_contribs.reduceByKey(_+_).mapValues(v => 0.15 + 0.85*v)
+      
     }
 
     // page_ranks.count
