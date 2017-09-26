@@ -9,7 +9,9 @@ start_spark_job() {
                                  --conf spark.task.cpus=1 \
                                  --master spark://10.254.0.146:7077 \
                                  --class PageRankPartC2 \
-                                 /home/ubuntu/rohit/PageRankSparkApp/target/scala-2.11/page-rank-group-23_2.11-1.0.jar
+                                 /home/ubuntu/rohit/PageRankSparkApp/target/scala-2.11/page-rank-group-23_2.11-1.0.jar \
+    	                         /spark/deployment/web-BerkStan.txt \
+                                 10 50
 }
 
 echo "Clearing cache"

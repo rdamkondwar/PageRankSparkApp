@@ -6,11 +6,28 @@ import org.apache.spark.RangePartitioner
 object PageRankPartC3 {
   def main(args: Array[String]) {
 
+    val file_path: String = {
+    	if (args.length > 0) {  args(0) }
+    	else { "/spark/deployment/web-BerkStan.txt" }
+    }
+    val num_of_iterations: Int = {
+    	if(args.length > 1) { args(1).toInt }
+	else { 10 }
+    }
+    val num_of_partitions: Int = {
+    	if(args.length > 1) args(2).toInt
+	else { 50 }
+    }
+
+    // println(file_path)
+    // println(num_of_iterations)
+    // println(num_of_partitions)
+
     val conf = new SparkConf().setAppName("CS-744-Assignment1-PartC-3")
 
     val sc = new SparkContext(conf)
 
-    val datafile = sc.textFile("/spark/deployment/web-BerkStan.txt", 20)
+    val datafile = sc.textFile(file_path, num_of_partitions)
 
     val raw_data = datafile.filter(f => !f.startsWith("#"))
     // raw_data.count
@@ -29,7 +46,7 @@ object PageRankPartC3 {
 
     var init_page_ranks = filtered_data.flatMap(e => List(e(0), e(1))).distinct.map(f => (f, 1.0))
     
-    val rankPartitioner = new RangePartitioner(20, datatuples)
+    val rankPartitioner = new RangePartitioner(num_of_partitions, datatuples)
     init_page_ranks = init_page_ranks.partitionBy(rankPartitioner).cache()
     var page_ranks = init_page_ranks
     // page_ranks.count
@@ -52,16 +69,16 @@ object PageRankPartC3 {
     // }
 
     // Todo: Partition
-    val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
+    val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2)).partitionBy(rankPartitioner)
     // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
     // val exploded_contribs = page_ranks.join(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
     
     page_ranks = exploded_contribs.reduceByKey((a,b) => (a+b)).mapValues(v => (0.15 + 0.85*v))
 
-    for (x <- 1 until 10) {
+    for (x <- 1 until num_of_iterations) {
       // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
       // TODO: Partition
-      val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
+      val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2)).partitionBy(rankPartitioner)
       // val exploded_contribs = page_ranks.join(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
       page_ranks = exploded_contribs.reduceByKey(_+_).mapValues(v => 0.15 + 0.85*v)
       

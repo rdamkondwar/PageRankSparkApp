@@ -11,7 +11,7 @@ start_spark_job() {
                                  --class PageRankPartC1 \
                                  /home/ubuntu/rohit/PageRankSparkApp/target/scala-2.11/page-rank-group-23_2.11-1.0.jar \
 	                         /spark/deployment/web-BerkStan.txt \
-                                 10 2
+                                 10 50
 }
 
 echo "Clearing cache"
