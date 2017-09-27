@@ -37,7 +37,6 @@ object PageRankPartC1 {
     val filtered_data = data.filter(e => (e.size == 2 && !e(0).equals(e(1))))
     // filtered_data.count
 
-    // val datatuples = filtered_data.map(e => (e(0), e(1)))
     val datatuples = filtered_data.map(e => (e(0), List(e(1))))
     // datatuples.count
 
@@ -56,18 +55,11 @@ object PageRankPartC1 {
       neighbours.getOrElse(List()).map(n => (n, new_rank))
     }
 
-    // def generateContrib(rank: Double, neighbours: List[String]) = {
-    //    val new_rank: Double = 1.0*rank/neighbours.size
-    //    neighbours.map(n => (n, new_rank))
-    //  }
-
     val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
-    // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
 
     page_ranks = exploded_contribs.reduceByKey((a,b) => (a+b)).mapValues(v => (0.15 + 0.85*v))
 
     for (x <- 1 until num_of_iterations) {
-      // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
       val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
       page_ranks = exploded_contribs.reduceByKey(_+_).mapValues(v => 0.15 + 0.85*v)
     }
@@ -86,6 +78,5 @@ object PageRankPartC1 {
     final_page_ranks.count
     final_page_ranks.take(100).foreach(println)
     sc.stop()
-    // Thread.sleep(20000)
   }
 }
