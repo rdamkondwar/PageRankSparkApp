@@ -23,7 +23,6 @@ object PageRankPartC2 {
     // println(num_of_iterations)
     // println(num_of_partitions)
 
-
     val conf = new SparkConf().setAppName("CS-744-Assignment1-PartC-2")
 
     val sc = new SparkContext(conf)
@@ -39,8 +38,6 @@ object PageRankPartC2 {
     val filtered_data = data.filter(e => (e.size == 2 && !e(0).equals(e(1))))
     // filtered_data.count
 
-    // val datatuples = filtered_data.map(e => (e(0), e(1)))
-    // TODO: Partition
     val datatuples = filtered_data.map(e => (e(0), List(e(1))))
     // datatuples.count
     // val rangePartitioner = new RangePartitioner(15, datatuples)
@@ -64,25 +61,13 @@ object PageRankPartC2 {
        neighbours.getOrElse(List()).map(n => (n, new_rank))
     }
 
-    // def generateContrib(rank: Double, neighbours: List[String]) = {
-    //     val new_rank: Double = 1.0*rank/neighbours.size
-    //     neighbours.map(n => (n, new_rank))
-    // }
-
-    // Todo: Partition
     val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2)).partitionBy(rankPartitioner)
-    // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
-    // val exploded_contribs = page_ranks.join(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
-    
+
     page_ranks = exploded_contribs.reduceByKey((a,b) => (a+b)).mapValues(v => (0.15 + 0.85*v))
 
     for (x <- 1 until num_of_iterations) {
-      // val exploded_contribs = groupedData.join(page_ranks).flatMap(e => generateContrib(e._2._2, e._2._1))
-      // TODO: Partition
       val exploded_contribs = page_ranks.leftOuterJoin(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2)).partitionBy(rankPartitioner)
-      // val exploded_contribs = page_ranks.join(groupedData).flatMap(e => generateContrib(e._2._1, e._2._2))
       page_ranks = exploded_contribs.reduceByKey(_+_).mapValues(v => 0.15 + 0.85*v)
-      
     }
 
     // page_ranks.count
@@ -99,6 +84,5 @@ object PageRankPartC2 {
     final_page_ranks.count
     final_page_ranks.take(100).foreach(println)
     sc.stop()
-    // Thread.sleep(20000)
   }
 }
